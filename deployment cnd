@@ -1,0 +1,11 @@
+gcloud functions deploy updateRedisOnCreate \
+  --gen2 \
+  --region=us-central1 \
+  --runtime=nodejs20 \
+  --entry-point=updateRedisOnCreate \
+  --trigger-event-providers=cloud.firestore \
+  --trigger-event-types=google.cloud.firestore.document.v1.created \
+  --trigger-resource=projects/YOUR_PROJECT_ID/databases/(default)/documents/yourCollection/{docId} \
+  --vpc-connector=coddle-vpc-connector \
+  --egress-settings=all \
+  --set-env-vars=REDIS_HOST=10.0.0.2,REDIS_PORT=6379
