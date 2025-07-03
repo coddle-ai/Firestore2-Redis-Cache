@@ -34,20 +34,28 @@ These collections store child information and trigger profile updates:
 6. **`child_questionnaire`** - Child questionnaire responses
 
 Each document in ALL collections must contain:
-- `parentId` (string) - The parent's unique identifier
-- `childId` (string) - The child's unique identifier
+- `childId` (string) - **REQUIRED** - The child's unique identifier
+- `parentId` (string) - **OPTIONAL** - The parent's unique identifier (required for full API access)
 
 ## Data Flow
 
 ### For Activity Collections (feedEvents, diaperEvents, sleepEvents, pumpingEvents):
+
+#### With parentId (Full Processing):
 1. **Firestore Event Trigger**: When a document is created/updated/deleted
 2. **Cloud Function Activation**: The corresponding Cloud Function is triggered
 3. **Data Extraction**: Extract `parentId` and `childId` from the document
-4. **API Authentication**: Fetch authentication token
+4. **API Authentication**: Fetch authentication token using parentId
 5. **Data Retrieval**: Call APIs to get:
    - 7-day summary data
    - Current day logs
-6. **Redis Storage**: Store activity data in Redis
+6. **Redis Storage**: Store full activity data in Redis
+
+#### Without parentId (Limited Processing):
+1. **Firestore Event Trigger**: When a document is created/updated/deleted
+2. **Cloud Function Activation**: The corresponding Cloud Function is triggered
+3. **Data Extraction**: Extract `childId` from the document
+4. **Redis Storage**: Store event data in Redis under limited processing key
 
 ### For Profile Collections (child_profile, child_questionnaire):
 1. **Firestore Event Trigger**: When a document is created/updated/deleted
@@ -197,6 +205,22 @@ Value Structure:
   },
   "lastUpdated": "ISO_8601_timestamp",
   "eventSource": "child_profile" or "child_questionnaire"
+}
+```
+
+### 6. Limited Processing Key (for documents without parentId)
+```
+Key: limited:child:{childId}:{collectionName}
+TTL: 1 hour (3600 seconds)
+
+Value Structure:
+{
+  "eventData": {
+    // Original document data from Firestore
+  },
+  "lastUpdated": "ISO_8601_timestamp",
+  "eventSource": "collection_name",
+  "processingMode": "limited_no_auth"
 }
 ```
 
